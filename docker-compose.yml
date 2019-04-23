@@ -1,0 +1,8 @@
+version: '3'
+services:
+  9cc:
+    build:
+      context: .
+    volumes:
+      - ./:/9cc
+    working_dir: /9cc
