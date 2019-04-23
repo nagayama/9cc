@@ -6,3 +6,7 @@ services:
     volumes:
       - ./:/9cc
     working_dir: /9cc
+    entrypoint:
+      - make
+      - test
+
