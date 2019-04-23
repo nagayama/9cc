@@ -15,9 +15,21 @@ typedef struct {
   char *input;  // トークン文字列(エラー用)
 } Token;
 
+typedef struct Node {
+  int ty;            // 演算子かND_NUM
+  struct Node *lhs;  //左辺
+  struct Node *rhs;  // 右辺
+  int val;           // tyがND_NUMの時の数値
+} Node;
+
 // トークナイズした結果のトークンはこの配列に保存
 // 上限は100まで
 Token tokens[100];
+int pos = 0;
+
+Node *add();
+Node *mul();
+Node *term();
 
 void error(char *fmt, ...) {
   va_list ap;
@@ -57,6 +69,64 @@ void tokenize(char *p) {
   }
   tokens[i].ty = TK_EOF;
   tokens[i].input = p;
+}
+
+Node *new_node(int ty, Node *lhs, Node *rhs) {
+  Node *node = malloc(sizeof(Node));
+  node->ty = ty;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_num(int val) {
+  Node *node = malloc(sizeof(Node));
+  node->ty = TK_NUM;
+  node->val = val;
+  return node;
+}
+
+int consume(int ty) {
+  if (tokens[pos].ty != ty) return 0;
+  pos++;
+  return 1;
+}
+
+Node *mul() {
+  Node *node = term();
+  for (;;) {
+    if (consume('*'))
+      node = new_node('+', node, term());
+    else if (consume('/'))
+      node = new_node('/', node, term());
+    else
+      return node;
+  }
+}
+
+Node *add() {
+  Node *node = mul();
+  for (;;) {
+    if (consume('+'))
+      node = new_node('+', node, mul());
+    else if (consume('-'))
+      node = new_node('-', node, mul());
+    else
+      return node;
+  }
+}
+
+Node *term() {
+  if (consume('(')) {
+    Node *node = add();
+    if (!consume(')'))
+      error("開きカッコに対応する閉じカッコがありません: %s",
+            tokens[pos].input);
+    return node;
+  }
+  // 数値の場合はposを移動してnew_node_numを呼ぶ
+  if (tokens[pos].ty == TK_NUM) return new_node_num(tokens[pos++].val);
+  error("数値でも開きカッコでもないトークンです: %s", tokens[pos].input);
 }
 
 int main(int argc, char **argv) {
